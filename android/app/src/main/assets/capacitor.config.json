@@ -1,0 +1,11 @@
+{
+	"appId": "com.johnceron.medidor",
+	"appName": "Cerón Medidor",
+	"webDir": "www",
+	"android": {
+		"allowMixedContent": false
+	},
+	"server": {
+		"androidScheme": "https"
+	}
+}

@@ -1,0 +1,11 @@
+{
+  "appId": "com.johnceron.ceronmaps",
+  "appName": "Cerón Maps",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

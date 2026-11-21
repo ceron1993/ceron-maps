@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Cerón Maps</title>
+<meta name="theme-color" content="#12355b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="lib/leaflet/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="map"></div>
+
+<!-- Barra superior -->
+<header id="topbar">
+  <button id="btnLib" class="icon back" aria-label="Volver a la biblioteca">‹</button>
+  <div id="title">Cerón Maps</div>
+  <span id="netBadge" class="badge">—</span>
+  <button id="btnMenu" class="icon" aria-label="Capas y datos" title="Capas y datos">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="m2 13 10 5 10-5"/><path d="m2 17.5 10 5 10-5" opacity=".6"/></svg>
+  </button>
+</header>
+
+<!-- Biblioteca (pantalla inicial) -->
+<section id="library">
+  <header class="lib-head">
+    <img src="icons/icon-192.png" alt="" class="lib-logo">
+    <div class="lib-brand"><b>Cerón Maps</b><span>Mapas de campo sin internet</span></div>
+    <span id="libNet" class="badge">—</span>
+  </header>
+  <div class="lib-gps" id="libGps">📍 Activa el GPS para ver en qué mapa estás</div>
+  <div class="lib-tabs">
+    <button class="lib-tab active" data-tab="maps">Mapas <span id="libCountMaps"></span></button>
+    <button class="lib-tab" data-tab="layers">Capas <span id="libCountVec"></span></button>
+  </div>
+  <ul id="libMaps" class="lib-list"></ul>
+  <ul id="libLayers" class="lib-list hidden"></ul>
+  <div id="libEmpty" class="lib-empty hidden">
+    <img src="icons/icon-192.png" alt="">
+    <h3>Tu biblioteca está vacía</h3>
+    <p>Importa un GeoPDF, GeoTIFF o imagen georreferenciada. También capas Shapefile, KML o KMZ.</p>
+  </div>
+  <div class="lib-actions">
+    <button id="libOpenAll" class="lib-btn light">🗺 Ver todo en el visor</button>
+    <button id="libImport" class="lib-btn">＋ Importar</button>
+  </div>
+</section>
+
+<!-- Panel de coordenadas -->
+<section id="coords" class="hidden">
+  <div class="row"><b>WGS84</b><span id="cLatLon">—</span></div>
+  <div class="row"><b>GMS</b><span id="cDms">—</span></div>
+  <div class="row"><b>CTM12</b><span id="cCtm">—</span></div>
+  <div class="row small"><span id="cAcc">—</span><span id="cAlt"></span></div>
+  <div id="cIn" class="inside hidden"></div>
+  <div id="cOut" class="warn hidden"></div>
+</section>
+
+<!-- Barra de herramientas inferior -->
+<nav id="toolbar">
+  <button id="btnGps" class="tb"><span>📍</span>GPS</button>
+  <button id="btnFollow" class="tb" disabled><span>🎯</span>Seguir</button>
+  <button id="btnPoint" class="tb"><span>📌</span>Marcar</button>
+  <button id="btnMeasure" class="tb"><span>📏</span>Medir</button>
+  <button id="btnAdd" class="tb"><span>＋</span>Importar</button>
+</nav>
+
+<!-- Panel lateral: mis mapas -->
+<aside id="drawer" class="hidden">
+  <div class="drawer-head">
+    <h2>Mapas</h2>
+    <button id="btnCloseDrawer" class="icon">✕</button>
+  </div>
+  <ul id="mapList" class="maplist"></ul>
+  <p id="emptyList" class="muted">Aún no has cargado mapas. Toca ＋ para importar un GeoPDF, GeoTIFF o imagen.</p>
+  <hr>
+  <div class="drawer-head"><h2>Mis capas</h2></div>
+  <ul id="vecList" class="maplist"></ul>
+  <p id="emptyVec" class="muted small">Sin capas. Toca ＋ para cargar un Shapefile (.zip), KML o KMZ, por ejemplo los polígonos de predios.</p>
+  <hr>
+  <div class="drawer-head"><h2>Mis puntos <span id="ptCount" class="muted small"></span></h2></div>
+  <div class="export-row">
+    <button id="btnExpKmz" class="btn">Exportar KMZ (con fotos)</button>
+    <button id="btnExpKml" class="btn">Exportar KML</button>
+  </div>
+  <label class="toggle small"><input type="checkbox" id="chkPtLabels" checked> Mostrar nombres en el mapa</label>
+  <ul id="ptList"></ul>
+  <p id="emptyPts" class="muted small">Sin puntos. Toca 📌 para marcar tu posición GPS, o mantén presionado el mapa.</p>
+  <hr>
+  <label class="toggle"><input type="checkbox" id="chkBase" checked> Mapa base OpenStreetMap (requiere internet; lo que veas queda en caché)</label>
+  <label class="toggle"><input type="checkbox" id="chkSat"> Imagen satelital Esri (requiere internet)</label>
+  <label class="toggle"><input type="checkbox" id="chkClarity"> Esri Clarity: fotos de archivo, a veces más nítidas o sin nubes, pero pueden ser más antiguas (requiere internet)</label>
+  <label class="toggle"><input type="checkbox" id="chkGoogle"> Google satélite (requiere internet y clave API; no queda offline)</label>
+  <div id="gBox" class="gbox hidden">
+    <label class="small">Tipo
+      <select id="gType"><option value="sat">Satélite</option><option value="hyb">Híbrido (satélite + calles y nombres)</option></select>
+    </label>
+    <label class="small">Clave API de Google Maps Platform
+      <input type="password" id="gKey" placeholder="AIza..." autocomplete="off">
+    </label>
+    <button class="btn" id="gSave">Guardar clave y activar</button>
+    <p class="muted small" id="gMsg"></p>
+  </div>
+  <p class="muted small" id="storageInfo"></p>
+</aside>
+
+<!-- Diálogo de importación -->
+<dialog id="dlgImport">
+  <form method="dialog" id="formImport">
+    <h3>Importar mapa o capa</h3>
+    <p class="muted small"><b>Mapas:</b> GeoPDF (.pdf), GeoTIFF (.tif), imagen (.jpg/.png) con .jgw/.pgw o por esquinas.<br>
+    <b>Capas:</b> Shapefile en .zip (o selecciona juntos .shp, .dbf, .shx, .prj), KML o KMZ.</p>
+    <input type="file" id="fileInput" multiple accept=".pdf,.tif,.tiff,.jpg,.jpeg,.png,.jgw,.pgw,.tfw,.wld,.zip,.shp,.dbf,.shx,.prj,.cpg,.kml,.kmz">
+    <label>Nombre <input type="text" id="impName" placeholder="Ej: Manzana 012 - San Vicente"></label>
+    <div id="crsBox" class="hidden">
+      <label>Sistema de coordenadas
+        <select id="impCrs"></select>
+      </label>
+    </div>
+    <div id="cornersBox" class="hidden">
+      <p class="small">No se encontró georreferencia. Escribe las coordenadas (WGS84, grados decimales) de las esquinas de la imagen:</p>
+      <div class="grid2">
+        <label>Norte (lat sup.) <input type="number" step="any" id="cN"></label>
+        <label>Sur (lat inf.) <input type="number" step="any" id="cS"></label>
+        <label>Oeste (lon izq.) <input type="number" step="any" id="cW"></label>
+        <label>Este (lon der.) <input type="number" step="any" id="cE"></label>
+      </div>
+    </div>
+    <label id="pdfPageBox" class="hidden">Página del PDF <input type="number" id="pdfPage" min="1" value="1"></label>
+    <label id="qualityBox">Calidad
+      <select id="impQuality">
+        <option value="2048">Normal (más liviano)</option>
+        <option value="4096" selected>Alta</option>
+        <option value="6000">Muy alta (celulares potentes)</option>
+      </select>
+    </label>
+    <div id="impStatus" class="small"></div>
+    <menu>
+      <button value="cancel" type="button" id="btnImpCancel">Cancelar</button>
+      <button id="btnImpOk" type="button" class="primary">Importar</button>
+    </menu>
+  </form>
+</dialog>
+
+<!-- Diálogo de punto -->
+<dialog id="dlgPoint">
+  <form method="dialog" id="formPoint">
+    <h3 id="ptTitle">Nuevo punto</h3>
+    <div id="ptCoords" class="small muted"></div>
+    <label>Nombre <input type="text" id="ptName" autocomplete="off"></label>
+    <label>Descripción / observaciones <textarea id="ptDesc" rows="3"></textarea></label>
+    <label>Foto (opcional)
+      <input type="file" id="ptPhoto" accept="image/*" capture="environment">
+    </label>
+    <img id="ptPhotoPrev" class="hidden" alt="">
+    <button type="button" id="ptPhotoDel" class="btn small hidden">Quitar foto</button>
+    <menu>
+      <button type="button" id="ptDelete" class="danger hidden">🗑 Eliminar</button>
+      <button type="button" id="ptCancel">Cancelar</button>
+      <button type="button" id="ptSave" class="primary">Guardar</button>
+    </menu>
+  </form>
+</dialog>
+
+<!-- Puntero para ubicar un punto -->
+<div id="crosshair" class="hidden" aria-hidden="true">
+  <svg width="64" height="64" viewBox="0 0 64 64"><g fill="none" stroke-linecap="round">
+    <circle cx="32" cy="32" r="14" stroke="#fff" stroke-width="5"/><circle cx="32" cy="32" r="14" stroke="#e8590c" stroke-width="2.5"/>
+    <path d="M32 2v18M32 44v18M2 32h18M44 32h18" stroke="#fff" stroke-width="5"/>
+    <path d="M32 2v18M32 44v18M2 32h18M44 32h18" stroke="#e8590c" stroke-width="2.5"/>
+    <circle cx="32" cy="32" r="2.5" fill="#e8590c" stroke="#fff" stroke-width="1"/></g></svg>
+</div>
+<div id="placeBar" class="hidden">
+  <div class="pb-title">Mueve el mapa para poner el puntero donde va el punto</div>
+  <div id="pbCoords" class="pb-coords"></div>
+  <div class="pb-btns">
+    <button id="pbGps" class="pb-btn">📍 Tomar en mi GPS</button>
+    <button id="pbHere" class="pb-btn primary">✛ Tomar en el puntero</button>
+  </div>
+  <div class="pb-btns">
+    <button id="pbCenter" class="pb-btn light">Llevar puntero a mi GPS</button>
+    <button id="pbCancel" class="pb-btn light">Cancelar</button>
+  </div>
+</div>
+
+<!-- Barra de medición -->
+<div id="measureBar" class="hidden">
+  <div class="mb-top">
+    <div class="seg"><button id="mDist" class="active">Distancia</button><button id="mArea">Área</button></div>
+    <button id="mClose" class="icon dark" aria-label="Cerrar">✕</button>
+  </div>
+  <div id="mResult" class="mb-result">Agrega el primer vértice</div>
+  <div id="mLive" class="mb-live"></div>
+  <div class="pb-btns">
+    <button id="mAdd" class="pb-btn primary">✛ Vértice en el puntero</button>
+    <button id="mGps" class="pb-btn">📍 Vértice en GPS</button>
+  </div>
+  <div class="pb-btns">
+    <button id="mUndo" class="pb-btn light">↶ Deshacer</button>
+    <button id="mClear" class="pb-btn light">Borrar</button>
+    <button id="mSave" class="pb-btn light">💾 Guardar</button>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+
+<script src="lib/leaflet/leaflet.js"></script>
+<script src="lib/proj4.js"></script>
+<script src="lib/geotiff.js"></script>
+<script src="lib/pdfjs/pdf.min.js"></script>
+<script src="lib/shp.min.js"></script>
+<script src="lib/togeojson.js"></script>
+<script src="georef.js"></script>
+<script src="app.js"></script>
+<script src="vectors.js"></script>
+<script src="points.js"></script>
+<script src="measure.js"></script>
+<script src="library.js"></script>
+</body>
+</html>

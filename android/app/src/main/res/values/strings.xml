@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cerón Maps</string>
+    <string name="title_activity_main">Cerón Maps</string>
+    <string name="package_name">com.johnceron.ceronmaps</string>
+    <string name="custom_url_scheme">com.johnceron.ceronmaps</string>
+</resources>
